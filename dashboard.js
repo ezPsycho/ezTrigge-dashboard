@@ -6,7 +6,7 @@ import glob from 'glob';
 import blessed from 'blessed';
 import contrib from 'blessed-contrib';
 
-import { i } from '@ez-trigger/server';
+import { i, w } from '@ez-trigger/server';
 
 import config from './config';
 import welcomeMessage from './modules/welcome';
@@ -99,19 +99,55 @@ const log = grid.set(0, 0, 8, 9, contrib.log, {
   label: 'Server Log'
 });
 
-const experiment = grid.set(0, 9, 6, 3, contrib.tree, {
+const debugType = grid.set(8, 0, 4, 3, blessed.list, {
+  label: 'Boroadcast Client Types',
+  keys: true,
+  style: {
+    item: {
+      hover: {
+        bg: 'blue'
+      }
+    },
+    selected: {
+      bg: 'blue',
+      bold: true
+    }
+  }
+});
+
+const debugCommand = grid.set(8, 3, 4, 3, blessed.list, {
+  label: 'Broadcast Commands',
+  keys: true,
+  style: {
+    item: {
+      hover: {
+        bg: 'blue'
+      }
+    },
+    selected: {
+      bg: 'blue',
+      bold: true
+    }
+  }
+});
+
+const debugLatency = grid.set(8, 6, 4, 3, blessed.list, {
+  label: 'Latency View'
+});
+
+const experiment = grid.set(0, 9, 5, 3, contrib.tree, {
   label: 'Experiment actions'
 });
 
-const users = grid.set(6, 9, 6, 3, contrib.table, {
+const users = grid.set(5, 9, 7, 3, contrib.table, {
   interactive: false,
-  label: 'Connected client',
-  columnSpacing: 1,
-  columnWidth: [7, 15, 5]
+  label: 'Connected clients',
+  columnSpacing: 0,
+  columnWidth: [10, 15, 5]
 });
 
 users.setData({
-  headers: ['UUID', 'IP', 'Group'],
+  headers: ['UUID', 'IP', 'Type'],
   data: []
 });
 
@@ -127,18 +163,98 @@ experiment.on('select', node => {
   }
 });
 
-const logFn = msg => {
-  log.log(msg);
-  screen.render();
-};
+debugType.on('select', node => {
+  const item = node.getText().match(/^\[[ X]\] (.*)$/)[1];
+  const clientType = Object.entries(clientTypes).find(x => x[1] === item)[0];
+
+  selectedTypes[clientType] = !selectedTypes[clientType];
+
+  updateTypeUI(server.clientTypes);
+});
+
+debugCommand.on('select', node => {
+  const command = node.getText();
+  if (!Object.values(selectedTypes).filter(x => x).length) {
+    logger.log(w('No message sent, check some type of clients on the "Broadcast Client Types" box.'));
+    
+     return false;
+  }
+
+  logger.log(i(`Broadcasting ${command} as debug information to all selected clients.`));
+  Object.keys(selectedTypes).map(type => {
+    server.broadcast(command, type);
+  });
+});
 
 screen.key(['C-c'], () => {
   return process.exit(0);
 });
 
+screen.key(['e'], () => {
+  logger.log(i('Focused on experiment panel.'));
+  experiment.focus();
+});
+
+screen.key(['t'], () => {
+  logger.log(i('Focused on broadcast client type panel.'));
+  debugType.focus();
+});
+
+screen.key(['c'], () => {
+  logger.log(i('Focused on broadcast commands panel.'));
+  debugCommand.focus();
+});
+
+
 screen.on('resize', () => {
   log.emit('attach');
 });
+
+const logFn = msg => {
+  log.log(`${msg}`);
+  screen.render();
+};
+
+const selectedTypes = {};
+
+const updateTypeUI = clientTypes => {
+  const uiElements = Object.keys(clientTypes).map(
+    clientType =>
+      `[${selectedTypes[clientType] ? 'X' : ' '}] ${clientTypes[clientType]}`
+  );
+
+  debugType.setItems(uiElements);
+
+  screen.render();
+};
+
+const updateCommandUI = commands => {
+  debugCommand.setItems(server.debugCommands);
+}
+
+const updateClientUI = clients => {
+  const result = [];
+
+  Object.values(clients).forEach(client => {
+    const type = client.props.type ? client.props.type : '???';
+
+    result.push([client.shortUuid, client.ip, type]);
+  });
+
+  users.setData({
+    headers: ['UUID', 'IP', 'Type'],
+
+    data: result
+  });
+
+  screen.render();
+
+  return true;
+};
+
+server.on('client-updated', updateClientUI);
+server.on('type-updated', updateTypeUI);
+server.on('debug-command-updated', updateCommandUI);
 
 (async () => {
   logger.setTarget(logFn);
@@ -148,6 +264,7 @@ screen.on('resize', () => {
 
   triggerSystem.integrate();
   await server.start();
-
+  updateTypeUI(server.clientTypes);
+  updateCommandUI(server.debugCommands);
   experiment.focus();
 })();
