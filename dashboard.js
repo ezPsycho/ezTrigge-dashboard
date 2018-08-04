@@ -14,7 +14,6 @@ import Logger from './modules/Logger';
 
 import TriggerServer from './modules/Server';
 import EzNirsTrigger from './modules/EzNirsTrigger';
-import DashboardBridge from './modules/DashboardBridge';
 
 const DEBUG_NO_CUI = false;
 
@@ -41,7 +40,6 @@ const server = new TriggerServer({
   port: config.port,
   clientTypes,
   logger: logger
-  //dashboardBridge: dashboardBridge
 });
 
 const triggerSystem = new EzNirsTrigger(server);
