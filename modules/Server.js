@@ -2,22 +2,24 @@
 
 import net from 'net';
 import process from 'process';
-import isCallable from 'is-callable';
-import { filter } from 'lodash';
+import EventEmitter from 'events';
+
 import { Commands } from '@ez-trigger/core';
 import { e, w, i } from '@ez-trigger/server';
 
 import Client from './Client';
 import { isNull } from 'util';
 
-class TriggerServer {
+class TriggerServer extends EventEmitter {
   constructor({
     ip,
     port,
     clientTypes = { __ANY__: '*' },
     forceVerify = null,
-    logger = console,
+    logger = console
   } = {}) {
+    super();
+
     this.ip = ip;
     this.port = port;
 
@@ -160,17 +162,43 @@ class TriggerServer {
     }
   }
 
-  async handleDisconnect({options, client}) {
+  async handleDisconnect({ options, client }) {
     client.kill('!BYE');
   }
 
-  handleUuid({options, client}) {
+  handleUuid({ options, client }) {
     newClient.send(`UUID ${client.uuid}`);
   }
 
   updateUserTable() {
-    if (this.dashboardBridge)
-      console.log('!');
+    this.emit('client-updated', this.clients);
+  }
+
+  registerClientTypes(options) {
+    this.clientTypes = Object.assign(this.clientTypes, options);
+    this.emit('type-updated', this.clientTypes);
+  }
+
+  deregisterClientTypes(types) {
+    const typeList = Array.isArray(types) ? types : [types];
+
+    typeList.forEach(type => delete this.clientTypes[type]);
+    this.emit('type-updated', this.clientTypes);
+  }
+
+  registerDebugCommand(commands) {
+    this.debugCommands = this.debugCommands.concat(commands);
+    this.emit('debug-command-updated', this.debugCommands);
+  }
+
+  deregisterDebugCommand(commands) {
+    const commandList = Array.isArray(commands) ? commands : [commands];
+
+    commandList.forEach(command => {
+      this.debugCommands.splice(this.debugCommands.indexOf(command));
+    });
+
+    this.emit('debug-command-updated', this.debugCommands);
   }
 }
 
