@@ -31,6 +31,8 @@ class TriggerServer extends EventEmitter {
     this.clientsByType = {};
     this.logger = logger;
 
+    this.debugCommands = ['ST', 'EN'];
+
     this.forceVerify = isNull(forceVerify)
       ? !this.clientTypes.__ANY__
       : forceVerify;
@@ -38,7 +40,7 @@ class TriggerServer extends EventEmitter {
     this.server.on('connection', socket => {
       let newClient = new Client({ client: socket, server: this, logger });
 
-      this.clients[newClient.shortUuid] = newClient;
+      this.clients[newClient.uuid] = newClient;
 
       // prettier-ignore
       this.logger.log(i(`${newClient.shortUuid} connected, ip: ${socket.remoteAddress}.`));
