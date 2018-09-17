@@ -6,7 +6,9 @@
   "license": "MIT",
   "scripts": {
     "nocui": "node -r esm main.js",
-    "start": "node -r esm dashboard.js"
+    "start": "node -r esm bundle.js",
+    "package": "webpack",
+    "deploy": "webpack && pkg bundle.js --targets node10-win-x86 --output ./deploy/ezTrigger-srv"
   },
   "dependencies": {
     "@ez-trigger/core": "https://github.com/ezPsycho/ezTrigger-core.git",
@@ -18,7 +20,14 @@
     "glob": "^7.1.2",
     "is-callable": "^1.1.4",
     "mri": "^1.1.1",
-    "pkg": "^4.3.1",
     "uuid": "^3.3.2"
-  }
+  },
+  "devDependencies": {
+    "pkg": "^4.3.1",
+    "webpack": "^4.19.0",
+    "webpack-cli": "^3.1.0",
+    "webpack-node-externals": "^1.7.2"
+  },
+  "deployFixWhitelist": ["@ez-trigger/server", "@ez-trigger/core"],
+  "packageIntoBundle": ["glob", "is-callable", "mri", "uuid", "blessed-contrib"]
 }
