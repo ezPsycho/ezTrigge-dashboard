@@ -8,6 +8,7 @@ import contrib from 'blessed-contrib';
 
 import { i, w } from '@ez-trigger/server';
 
+import { serverPackagePath } from './modules/config';
 import config from './config';
 import welcomeMessage from './modules/welcome';
 import Logger from './modules/Logger';
@@ -27,7 +28,7 @@ const logger = new Logger();
 
 logger.log(i('Initializing ezTrigger system dashboard.'));
 
-const screen = blessed.screen();
+const screen = blessed.screen({});
 
 // Server components
 let clientTypes, actions;
@@ -46,15 +47,13 @@ const triggerSystem = new EzNirsTrigger(server);
 
 // Scan the server dirs.
 
-if (argvs._ && argvs._[2]) {
-  const serverPackagePath = argvs._[2].replace(/\\/g, '/');
+const serverPackageManifestPaths = glob.sync(
+  `${serverPackagePath}/*/package.json`
+);
 
+if (serverPackagePath.length) {
   logger.log(
     i(`Will read server package information from ${serverPackagePath}.`)
-  );
-
-  const serverPackageManifestPaths = glob.sync(
-    `${serverPackagePath}/*/package.json`
   );
 
   logger.log(i(`Found ${serverPackageManifestPaths.length} packages.`));
@@ -71,7 +70,7 @@ if (argvs._ && argvs._[2]) {
   serverPackageManifests.forEach(manifest => {
     logger.log(i(`Loading "${manifest.functionListName}"...`));
 
-    const ServerPackageClass = require(path.join(manifest.path, manifest.main))
+    const ServerPackageClass = __non_webpack_require__(path.join(manifest.path, manifest.main))
       .default;
     const serverPackageObject = new ServerPackageClass(server);
 
@@ -175,12 +174,18 @@ debugType.on('select', node => {
 debugCommand.on('select', node => {
   const command = node.getText();
   if (!Object.values(selectedTypes).filter(x => x).length) {
-    logger.log(w('No message sent, check some type of clients on the "Broadcast Client Types" box.'));
-    
-     return false;
+    logger.log(
+      w(
+        'No message sent, check some type of clients on the "Broadcast Client Types" box.'
+      )
+    );
+
+    return false;
   }
 
-  logger.log(i(`Broadcasting ${command} as debug information to all selected clients.`));
+  logger.log(
+    i(`Broadcasting ${command} as debug information to all selected clients.`)
+  );
   Object.keys(selectedTypes).map(type => {
     server.broadcast(command, type);
   });
@@ -204,7 +209,6 @@ screen.key(['c'], () => {
   logger.log(i('Focused on broadcast commands panel.'));
   debugCommand.focus();
 });
-
 
 screen.on('resize', () => {
   log.emit('attach');
@@ -230,7 +234,7 @@ const updateTypeUI = clientTypes => {
 
 const updateCommandUI = commands => {
   debugCommand.setItems(server.debugCommands);
-}
+};
 
 const updateClientUI = clients => {
   const result = [];
