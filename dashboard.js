@@ -32,7 +32,9 @@ const logger = new Logger();
 
 logger.log(i('Initializing ezTrigger system dashboard.'));
 
-const screen = blessed.screen({});
+const screen = blessed.screen({
+  title: 'ezTrigger System'
+});
 
 // Server components
 let clientTypes, actions;
@@ -106,13 +108,9 @@ const debugType = grid.set(8, 0, 4, 3, blessed.list, {
   label: 'Boroadcast Client Types',
   keys: true,
   style: {
-    item: {
-      hover: {
-        bg: 'blue'
-      }
-    },
     selected: {
-      bg: 'blue',
+      bg: '',
+      fg: 'white',
       bold: true
     }
   }
@@ -122,13 +120,9 @@ const debugCommand = grid.set(8, 3, 4, 3, blessed.list, {
   label: 'Broadcast Commands',
   keys: true,
   style: {
-    item: {
-      hover: {
-        bg: 'blue'
-      }
-    },
     selected: {
-      bg: 'blue',
+      bg: '',
+      fg: 'white',
       bold: true
     }
   }
@@ -201,17 +195,29 @@ screen.key(['C-c'], () => {
 
 screen.key(['e'], () => {
   logger.log(i('Focused on experiment panel.'));
+  experiment.rows.style.selected.bg = 'blue';
+  debugType.style.selected.bg = '';
+  debugCommand.style.selected.bg = '';
   experiment.focus();
+  screen.render();
 });
 
 screen.key(['t'], () => {
   logger.log(i('Focused on broadcast client type panel.'));
+  experiment.rows.style.selected.bg = '';
+  debugType.style.selected.bg = 'blue';
+  debugCommand.style.selected.bg = '';
   debugType.focus();
+  screen.render();
 });
 
 screen.key(['c'], () => {
   logger.log(i('Focused on broadcast commands panel.'));
+  experiment.rows.style.selected.bg = '';
+  debugType.style.selected.bg = '';
+  debugCommand.style.selected.bg = 'blue';
   debugCommand.focus();
+  screen.render();
 });
 
 screen.on('resize', () => {
