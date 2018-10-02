@@ -25,6 +25,7 @@
     "uuid": "^3.3.2"
   },
   "devDependencies": {
+    "node-resourcehacker": "^1.2.1",
     "pkg": "^4.3.1",
     "webpack": "^4.19.0",
     "webpack-cli": "^3.1.0",
