@@ -74,7 +74,7 @@ if (serverPackagePath.length) {
   serverPackageManifests.forEach(manifest => {
     logger.log(i(`Loading "${manifest.functionListName}"...`));
 
-    const ServerPackageClass = __non_webpack_require__(path.join(manifest.path, manifest.main))
+    const ServerPackageClass = eval('require')(path.join(manifest.path, manifest.main))  //__non_webpack_require__
       .default;
     const serverPackageObject = new ServerPackageClass(server);
 
