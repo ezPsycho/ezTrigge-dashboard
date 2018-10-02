@@ -8,8 +8,7 @@ import contrib from 'blessed-contrib';
 
 import { i, w } from '@ez-trigger/server';
 
-import { serverPackagePath } from './modules/config';
-import config from './config';
+import { serverPackagePath, configFile, configPath } from './modules/config';
 import welcomeMessage from './modules/welcome';
 import Logger from './modules/Logger';
 
@@ -22,9 +21,7 @@ const DEBUG_NO_CUI = false;
 
 const argvs = mri(process.argv);
 
-if(argvs.debug){
-  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 10000);
-}
+console.log(i(`Current config path is: ${configPath}`));
 
 // Dashboard related objects
 
@@ -43,8 +40,8 @@ clientTypes = {};
 actions = {};
 
 const server = new TriggerServer({
-  ip: config.ip,
-  port: config.port,
+  ip: configFile.ip,
+  port: configFile.port,
   clientTypes,
   logger: logger
 });

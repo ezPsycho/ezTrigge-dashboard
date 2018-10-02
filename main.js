@@ -1,4 +1,4 @@
-import config from './config';
+import { configFile } from './modules/config';
 import TriggerServer from './modules/Server';
 import EzNirsTrigger from './modules/EzNirsTrigger';
 
@@ -12,8 +12,8 @@ const clientTypes = {
 };
 
 const server = new TriggerServer({
-  ip: config.ip,
-  port: config.port,
+  ip: configFile.ip,
+  port: configFile.port,
   clientTypes
 });
 
