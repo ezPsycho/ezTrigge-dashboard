@@ -22,6 +22,10 @@ const DEBUG_NO_CUI = false;
 
 const argvs = mri(process.argv);
 
+if(argvs.debug){
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 10000);
+}
+
 // Dashboard related objects
 
 const logger = new Logger();
