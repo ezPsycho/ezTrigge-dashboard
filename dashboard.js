@@ -93,6 +93,11 @@ if (serverPackagePath.length) {
   };
 }
 
+// Wait for several second before loading the cui.
+
+logger.log(i('The system will start soon...'));
+Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 2000);
+
 // Start drawing the dashboard.
 
 const grid = new contrib.grid({ rows: 12, cols: 12, screen: screen });
