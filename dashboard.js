@@ -254,11 +254,15 @@ const updateClientUI = clients => {
   Object.values(clients).forEach(client => {
     const type = client.props.type ? client.props.type : '???';
 
-    result.push([client.shortUuid, client.ip, type]);
+    const id = client.props.id
+      ? colors.white(client.props.id)
+      : client.shortUuid;
+
+    result.push([id, client.ip, type]);
   });
 
   users.setData({
-    headers: ['UUID', 'IP', 'Type'],
+    headers: ['ID', 'IP', 'Type'],
 
     data: result
   });

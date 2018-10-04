@@ -29,6 +29,7 @@ class TriggerServer extends EventEmitter {
     this.clients = {};
     this.clientTypes = clientTypes;
     this.clientsByType = {};
+    this.clientsById = {};
     this.logger = logger;
 
     this.debugCommands = ['ST', 'EN'];
@@ -50,6 +51,7 @@ class TriggerServer extends EventEmitter {
 
     this.server.on('error', this.handleServerError);
     this.commands.register('TP', this.handleType, true);
+    this.commands.register('ID', this.handleId, true);
     this.commands.register('DC', this.handleDisconnect, true);
     this.commands.register('UUID', this.handleUuid, true);
   }
@@ -132,6 +134,16 @@ class TriggerServer extends EventEmitter {
     }
   }
 
+  async send(message, id) {
+    if (id && this.clientsById[id]) {
+      this.clientsById[id].send(message);
+    } else {
+      Object.values(this.clients)
+        .filter(client => client.uuid === 'id' || client.shortUuid === 'id')
+        .map(client => client.send(message));
+    }
+  }
+
   async handleType({ options, client }) {
     const type = options;
     const clientType = client.server.clientTypes;
@@ -161,6 +173,34 @@ class TriggerServer extends EventEmitter {
       client.logger.log(w(`${client.shortUuid} was not verified, will kill it, ip: ${client.ip}.`));
 
       client.kill('!EWRONGTYPE');
+    }
+  }
+
+  async handleId({ options, client }) {
+    const id = options;
+    const clientIds = Object.keys(client.server.clientsById);
+
+    if (client.props.id) {
+      delete client.server.clientsById[client.id];
+      client.logger.log(
+        i(`${client.shortUuid} deregister its original id, ip: ${client.ip}.`)
+      );
+    }
+
+    if (!clientIds.includes(id)) {
+      client.send('REGISTERED');
+      client.setProps({ id: type });
+
+      client.server.clientsById[id] = client;
+
+      // prettier-ignore
+      client.logger.log(i(`${client.shortUuid} registered a ID as ${id}, ip: ${client.ip}.`));
+      client.server.updateUserTable();
+    } else {
+      // prettier-ignore
+      client.logger.log(w(`${client.shortUuid} registered a duplicate ID, will kill it, ip: ${client.ip}.`));
+
+      client.kill('!EDUPLICATEID');
     }
   }
 
