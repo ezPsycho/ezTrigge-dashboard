@@ -63,5 +63,6 @@ typings/
 # Deployment folder
 deploy/
 
-#ezTrigger server programs
+#ezTrigger server programs and plugins
 programs/
+plugins/

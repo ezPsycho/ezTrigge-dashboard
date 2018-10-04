@@ -5,15 +5,20 @@ import mri from 'mri';
 import glob from 'glob';
 import blessed from 'blessed';
 import contrib from 'blessed-contrib';
+import colors from 'colors/safe';
 
 import { i, w } from '@ez-trigger/server';
 
-import { serverPackagePath, configFile, configPath } from './modules/config';
+import {
+  pluginPackagePath,
+  serverPackagePath,
+  configFile,
+  configPath
+} from './modules/config';
 import welcomeMessage from './modules/welcome';
 import Logger from './modules/Logger';
 
 import TriggerServer from './modules/Server';
-import EzNirsTrigger from './modules/EzNirsTrigger';
 
 const DEBUG_NO_CUI = false;
 
@@ -46,7 +51,40 @@ const server = new TriggerServer({
   logger: logger
 });
 
-const triggerSystem = new EzNirsTrigger(server);
+// Scan the plugins dirs.
+
+const pluginPackageManifestPaths = glob.sync(
+  `${pluginPackagePath}/*/package.json`
+);
+
+const plugins = [];
+
+if (pluginPackageManifestPaths.length) {
+  logger.log(
+    i(`Will read plugin package information from ${pluginPackagePath}.`)
+  );
+
+  logger.log(i(`Found ${pluginPackageManifestPaths.length} packages.`));
+
+  const pluginPackageManifests = pluginPackageManifestPaths.map(filePath => {
+    const rawData = fs.readFileSync(filePath);
+    const result = JSON.parse(rawData);
+
+    result.path = path.dirname(filePath);
+
+    return result;
+  });
+
+  pluginPackageManifests.forEach(manifest => {
+    logger.log(i(`Loading "${manifest.name}"...`));
+
+    const pluginPackageClass = eval('require')(
+      path.join(manifest.path, manifest.main)
+    ).default;
+
+    new pluginPackageClass(server).integrate();
+  });
+}
 
 // Scan the server dirs.
 
@@ -73,8 +111,9 @@ if (serverPackagePath.length) {
   serverPackageManifests.forEach(manifest => {
     logger.log(i(`Loading "${manifest.functionListName}"...`));
 
-    const ServerPackageClass = eval('require')(path.join(manifest.path, manifest.main))  //__non_webpack_require__
-      .default;
+    const ServerPackageClass = eval('require')(
+      path.join(manifest.path, manifest.main)
+    ).default; //__non_webpack_require__
     const serverPackageObject = new ServerPackageClass(server);
 
     clientTypes[manifest.clientTypeId] = manifest.clientTypeName;
@@ -88,7 +127,6 @@ if (serverPackagePath.length) {
   });
 } else {
   clientTypes = {
-    TRG: 'ezNirsTrigger client',
     EXP: 'experiment client'
   };
 }
@@ -282,7 +320,6 @@ server.on('debug-command-updated', updateCommandUI);
   welcomeMessage.split('\n').forEach(msg => logger.log(msg));
   logger.log('');
 
-  triggerSystem.integrate();
   await server.start();
   updateTypeUI(server.clientTypes);
   updateCommandUI(server.debugCommands);

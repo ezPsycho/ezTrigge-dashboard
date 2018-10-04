@@ -34,8 +34,10 @@ const basePath = path.dirname(configPath);
 
 const configFile = JSON.parse(fs.readFileSync(configPath));
 
+const pluginPackagePath = path.join(basePath, 'plugins');
+
 const serverPackagePath = args.dir
   ? args.dir
   : path.join(basePath, 'programs');
 
-export { serverPackagePath, configFile, configPath };
+export { pluginPackagePath, serverPackagePath, configFile, configPath };
