@@ -28,10 +28,14 @@ if (args.config) {
   process.exit(1);
 }
 
+configPath = path.normalize(configPath);
+
+const basePath = path.dirname(configPath);
+
 const configFile = JSON.parse(fs.readFileSync(configPath));
 
 const serverPackagePath = args.dir
   ? args.dir
-  : path.join(process.cwd(), 'programs');
+  : path.join(basePath, 'programs');
 
 export { serverPackagePath, configFile, configPath };
