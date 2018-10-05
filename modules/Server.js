@@ -3,12 +3,13 @@
 import net from 'net';
 import process from 'process';
 import EventEmitter from 'events';
+import { isNull } from 'util';
 
-import { Commands } from '@ez-trigger/core';
+import { Commands, Records } from '@ez-trigger/core';
 import { e, w, i } from '@ez-trigger/server';
 
+import { recordExportPath } from './config';
 import Client from './Client';
-import { isNull } from 'util';
 
 class TriggerServer extends EventEmitter {
   constructor({
@@ -26,6 +27,7 @@ class TriggerServer extends EventEmitter {
     this.server = net.createServer();
     this.restartTimeout = false;
     this.commands = new Commands(this);
+    this.records = new Records(recordExportPath);
     this.clients = {};
     this.clientTypes = clientTypes;
     this.clientsByType = {};

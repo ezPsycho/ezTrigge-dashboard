@@ -8,6 +8,20 @@ import { e } from '@ez-trigger/server';
 
 const args = mri(process.argv.slice(2));
 
+const getPath = (configFileItem, defaultPath) => {
+  let result;
+
+  if (configFile[configFileItem]) {
+    result = path.isAbsolute(configFile[configFileItem])
+      ? configFile[configFileItem]
+      : path.join(basePath, configFile[configFileItem]);
+  } else {
+    result = path.join(basePath, defaultPath);
+  }
+
+  return result;
+};
+
 let configPath;
 
 if (args.config) {
@@ -34,10 +48,14 @@ const basePath = path.dirname(configPath);
 
 const configFile = JSON.parse(fs.readFileSync(configPath));
 
-const pluginPackagePath = path.join(basePath, 'plugins');
+const pluginPackagePath = getPath('pluginPath', 'plugins');
+const recordExportPath = getPath('exportPath', 'data');
+const serverPackagePath = args.dir ? args.dir : getPath('programPath', 'programs');
 
-const serverPackagePath = args.dir
-  ? args.dir
-  : path.join(basePath, 'programs');
-
-export { pluginPackagePath, serverPackagePath, configFile, configPath };
+export {
+  pluginPackagePath,
+  serverPackagePath,
+  recordExportPath,
+  configFile,
+  configPath
+};
