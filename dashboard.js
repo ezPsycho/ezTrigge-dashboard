@@ -3,17 +3,19 @@ import path from 'path';
 
 import mri from 'mri';
 import glob from 'glob';
+import fse from 'fs-extra';
 import blessed from 'blessed';
 import contrib from 'blessed-contrib';
 import colors from 'colors/safe';
 
+import { getTimestamp } from '@ez-trigger/core';
 import { i, w } from '@ez-trigger/server';
 
 import {
+  recordExportPath,
   pluginPackagePath,
   serverPackagePath,
-  configFile,
-  configPath
+  configFile
 } from './modules/config';
 import welcomeMessage from './modules/welcome';
 import Logger from './modules/Logger';
@@ -22,11 +24,11 @@ import TriggerServer from './modules/Server';
 
 const DEBUG_NO_CUI = false;
 
+Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 10000);
+
 // Argvs related code
 
 const argvs = mri(process.argv);
-
-console.log(i(`Current config path is: ${configPath}`));
 
 // Dashboard related objects
 
@@ -127,9 +129,54 @@ if (serverPackagePath.length) {
   });
 } else {
   clientTypes = {
-    EXP: 'experiment client'
+    EXP: 'experimentWidget.client'
   };
 }
+
+const tools = [
+  {
+    label: 'Records',
+    getBadge: () => server.records.data.length
+  },
+  {
+    label: ' Export Records',
+    fn: async () => {
+      fse.ensureDirSync(recordExportPath);
+      const exportPath = await server.records.export('record');
+      logger.log(i(`Exported the records to: ${exportPath}`));
+    }
+  },
+  {
+    label: ' Clear Records',
+    fn: () => {
+      server.records.clear();
+      logger.log(i(`Records cleared.`));
+    }
+  },
+  {
+    label: 'Logs',
+    getBadge: () => logWidget.logLines.length
+  },
+  {
+    label: ' Export Logs',
+    fn: async () => {
+      const logLines = logWidget.logLines.join('\n');
+      const exportPath = path.join(
+        recordExportPath,
+        `log ${getTimestamp()}.log`
+      );
+      await fse.writeFile(exportPath, logLines);
+
+      logger.log(i(`Exported the records to: ${exportPath}`));
+    }
+  }
+];
+
+const getToolItems = () =>
+  tools.map(
+    //item => ()
+    item => (item.getBadge ? `${item.label} [${item.getBadge()}]` : item.label)
+  );
 
 // Wait for several second before loading the cui.
 
@@ -138,69 +185,73 @@ Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 2000);
 
 // Start drawing the dashboard.
 
+const unselectedWidgetStyle = {
+  selected: {
+    bg: '',
+    fg: 'white',
+    bold: true
+  }
+};
+
 const grid = new contrib.grid({ rows: 12, cols: 12, screen: screen });
 
-const log = grid.set(0, 0, 8, 9, contrib.log, {
+const logWidget = grid.set(0, 0, 8, 9, contrib.log, {
   label: 'Server Log'
 });
 
-const debugType = grid.set(8, 0, 4, 3, blessed.list, {
+const debugTypeWidget = grid.set(8, 0, 4, 3, blessed.list, {
   label: 'Boroadcast Client Types',
   keys: true,
-  style: {
-    selected: {
-      bg: '',
-      fg: 'white',
-      bold: true
-    }
-  }
+  style: unselectedWidgetStyle
 });
 
-const debugCommand = grid.set(8, 3, 4, 3, blessed.list, {
+const debugCommandWidget = grid.set(8, 3, 4, 3, blessed.list, {
   label: 'Broadcast Commands',
   keys: true,
-  style: {
-    selected: {
-      bg: '',
-      fg: 'white',
-      bold: true
-    }
+  style: unselectedWidgetStyle
+});
+
+const toolListWidget = grid.set(8, 6, 4, 3, blessed.list, {
+  label: 'Tools',
+  keys: true,
+  style: unselectedWidgetStyle
+});
+
+toolListWidget.on('select', (_, itemIndex) => {
+  if (tools[itemIndex].fn) {
+    tools[itemIndex].fn();
   }
 });
 
-const debugLatency = grid.set(8, 6, 4, 3, blessed.list, {
-  label: 'Latency View'
+const experimentWidget = grid.set(0, 9, 5, 3, contrib.tree, {
+  label: 'experimentWidget.actions'
 });
 
-const experiment = grid.set(0, 9, 5, 3, contrib.tree, {
-  label: 'Experiment actions'
-});
-
-const users = grid.set(5, 9, 7, 3, contrib.table, {
+const userWidget = grid.set(5, 9, 7, 3, contrib.table, {
   interactive: false,
   label: 'Connected clients',
   columnSpacing: 0,
   columnWidth: [10, 15, 5]
 });
 
-users.setData({
+userWidget.setData({
   headers: ['UUID', 'IP', 'Type'],
   data: []
 });
 
-experiment.setData({
+experimentWidget.setData({
   lines: false,
   extended: true,
   children: actions
 });
 
-experiment.on('select', node => {
+experimentWidget.on('select', node => {
   if (node.fn) {
     node.fn();
   }
 });
 
-debugType.on('select', node => {
+debugTypeWidget.on('select', node => {
   const item = node.getText().match(/^\[[ X]\] (.*)$/)[1];
   const clientType = Object.entries(clientTypes).find(x => x[1] === item)[0];
 
@@ -209,7 +260,7 @@ debugType.on('select', node => {
   updateTypeUI(server.clientTypes);
 });
 
-debugCommand.on('select', node => {
+debugCommandWidget.on('select', node => {
   const command = node.getText();
   if (!Object.values(selectedTypes).filter(x => x).length) {
     logger.log(
@@ -234,38 +285,44 @@ screen.key(['C-c'], () => {
 });
 
 screen.key(['e'], () => {
-  logger.log(i('Focused on experiment panel.'));
-  experiment.rows.style.selected.bg = 'blue';
-  debugType.style.selected.bg = '';
-  debugCommand.style.selected.bg = '';
-  experiment.focus();
+  logger.log(i('Focused on experimentWidget.panel.'));
+  experimentWidget.rows.style.selected.bg = 'blue';
+  debugTypeWidget.style.selected.bg = '';
+  debugCommandWidget.style.selected.bg = '';
+  experimentWidget.focus();
   screen.render();
 });
 
 screen.key(['t'], () => {
   logger.log(i('Focused on broadcast client type panel.'));
-  experiment.rows.style.selected.bg = '';
-  debugType.style.selected.bg = 'blue';
-  debugCommand.style.selected.bg = '';
-  debugType.focus();
+  experimentWidget.rows.style.selected.bg = '';
+  debugTypeWidget.style.selected.bg = 'blue';
+  debugCommandWidget.style.selected.bg = '';
+  debugTypeWidget.focus();
   screen.render();
 });
 
 screen.key(['c'], () => {
   logger.log(i('Focused on broadcast commands panel.'));
-  experiment.rows.style.selected.bg = '';
-  debugType.style.selected.bg = '';
-  debugCommand.style.selected.bg = 'blue';
-  debugCommand.focus();
+  experimentWidget.rows.style.selected.bg = '';
+  debugTypeWidget.style.selected.bg = '';
+  debugCommandWidget.style.selected.bg = 'blue';
+  debugCommandWidget.focus();
+  screen.render();
+});
+
+screen.key(['o'], () => {
+  logger.log(i('Focused on tool list.'));
+  toolListWidget.focus();
   screen.render();
 });
 
 screen.on('resize', () => {
-  log.emit('attach');
+  logWidget.emit('attach');
 });
 
 const logFn = msg => {
-  log.log(`${msg}`);
+  logWidget.log(`${msg}`);
   screen.render();
 };
 
@@ -277,13 +334,15 @@ const updateTypeUI = clientTypes => {
       `[${selectedTypes[clientType] ? 'X' : ' '}] ${clientTypes[clientType]}`
   );
 
-  debugType.setItems(uiElements);
+  debugTypeWidget.setItems(uiElements);
 
   screen.render();
 };
 
 const updateCommandUI = commands => {
-  debugCommand.setItems(server.debugCommands);
+  debugCommandWidget.setItems(server.debugCommands);
+
+  screen.render();
 };
 
 const updateClientUI = clients => {
@@ -299,7 +358,7 @@ const updateClientUI = clients => {
     result.push([id, client.ip, type]);
   });
 
-  users.setData({
+  userWidget.setData({
     headers: ['ID', 'IP', 'Type'],
 
     data: result
@@ -310,9 +369,17 @@ const updateClientUI = clients => {
   return true;
 };
 
+const updateToolsUI = () => {
+  toolListWidget.setItems(getToolItems());
+
+  screen.render();
+}
+
 server.on('client-updated', updateClientUI);
 server.on('type-updated', updateTypeUI);
 server.on('debug-command-updated', updateCommandUI);
+server.records.on('record-updated', updateToolsUI);
+logger.on('log-updated', updateToolsUI);
 
 (async () => {
   logger.setTarget(logFn);
@@ -323,5 +390,9 @@ server.on('debug-command-updated', updateCommandUI);
   await server.start();
   updateTypeUI(server.clientTypes);
   updateCommandUI(server.debugCommands);
-  experiment.focus();
+  updateToolsUI();
+
+  experimentWidget.focus();
+
+  screen.render();
 })();
