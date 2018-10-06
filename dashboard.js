@@ -127,7 +127,7 @@ if (serverPackagePath.length) {
   });
 } else {
   clientTypes = {
-    EXP: 'experimentWidget.client'
+    EXP: 'experiment client'
   };
 }
 
@@ -183,13 +183,13 @@ Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 2000);
 
 // Start drawing the dashboard.
 
-const unselectedWidgetStyle = {
+const generateUnselectedWidgetStyle = () => ({
   selected: {
     bg: '',
     fg: 'white',
     bold: true
   }
-};
+});
 
 const grid = new contrib.grid({ rows: 12, cols: 12, screen: screen });
 
@@ -200,19 +200,19 @@ const logWidget = grid.set(0, 0, 8, 9, contrib.log, {
 const debugTypeWidget = grid.set(8, 0, 4, 3, blessed.list, {
   label: 'Boroadcast Client Types',
   keys: true,
-  style: unselectedWidgetStyle
+  style: generateUnselectedWidgetStyle()
 });
 
 const debugCommandWidget = grid.set(8, 3, 4, 3, blessed.list, {
   label: 'Broadcast Commands',
   keys: true,
-  style: unselectedWidgetStyle
+  style: generateUnselectedWidgetStyle()
 });
 
 const toolListWidget = grid.set(8, 6, 4, 3, blessed.list, {
   label: 'Tools',
   keys: true,
-  style: unselectedWidgetStyle
+  style: generateUnselectedWidgetStyle()
 });
 
 toolListWidget.on('select', (_, itemIndex) => {
@@ -222,9 +222,10 @@ toolListWidget.on('select', (_, itemIndex) => {
 });
 
 const experimentWidget = grid.set(0, 9, 5, 3, contrib.tree, {
-  label: 'experimentWidget.actions',
+  label: 'Experiment Actions',
   style: {
     selected: {
+      bg: 'blue',
       fg: 'white',
       bold: true
     }
@@ -288,38 +289,45 @@ screen.key(['C-c'], () => {
   return process.exit(0);
 });
 
-screen.key(['e'], () => {
-  logger.log(i('Focused on experimentWidget.panel.'));
-  experimentWidget.rows.style.selected.bg = 'blue';
-  debugTypeWidget.style.selected.bg = '';
-  debugCommandWidget.style.selected.bg = '';
-  experimentWidget.focus();
-  screen.render();
-});
+let currentFocusIndex = 0;
+const focusOrder = [
+  {
+    widget: experimentWidget,
+    repaintStyleTarget: experimentWidget.rows.style.selected
+  },
+  {
+    widget: debugTypeWidget,
+    repaintStyleTarget: debugTypeWidget.style.selected
+  },
+  {
+    widget: debugCommandWidget,
+    repaintStyleTarget: debugCommandWidget.style.selected
+  },
+  {
+    widget: toolListWidget,
+    repaintStyleTarget: toolListWidget.style.selected
+  }
+];
 
-screen.key(['t'], () => {
-  logger.log(i('Focused on broadcast client type panel.'));
-  experimentWidget.rows.style.selected.bg = '';
-  debugTypeWidget.style.selected.bg = 'blue';
-  debugCommandWidget.style.selected.bg = '';
-  debugTypeWidget.focus();
-  screen.render();
-});
+const switchFocus = step => {
+  currentFocusIndex += step;
 
-screen.key(['c'], () => {
-  logger.log(i('Focused on broadcast commands panel.'));
-  experimentWidget.rows.style.selected.bg = '';
-  debugTypeWidget.style.selected.bg = '';
-  debugCommandWidget.style.selected.bg = 'blue';
-  debugCommandWidget.focus();
-  screen.render();
-});
+  if (currentFocusIndex > focusOrder.length - 1) {
+    currentFocusIndex = 0;
+  } else if (currentFocusIndex < 0) {
+    currentFocusIndex = focusOrder.length - 1;
+  }
 
-screen.key(['o'], () => {
-  logger.log(i('Focused on tool list.'));
-  toolListWidget.focus();
+  focusOrder.forEach((item, index) => {
+    item.repaintStyleTarget.bg = index === currentFocusIndex ? 'blue' : '';
+  });
+
+  focusOrder[currentFocusIndex].widget.focus();
   screen.render();
-});
+};
+
+screen.key(['tab', 'd'], () => switchFocus(1));
+screen.key(['a'], () => switchFocus(-1));
 
 screen.on('resize', () => {
   logWidget.emit('attach');
@@ -377,7 +385,7 @@ const updateToolsUI = () => {
   toolListWidget.setItems(getToolItems());
 
   screen.render();
-}
+};
 
 server.on('client-updated', updateClientUI);
 server.on('type-updated', updateTypeUI);
