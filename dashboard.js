@@ -24,8 +24,6 @@ import TriggerServer from './modules/Server';
 
 const DEBUG_NO_CUI = false;
 
-Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 10000);
-
 // Argvs related code
 
 const argvs = mri(process.argv);
@@ -224,7 +222,13 @@ toolListWidget.on('select', (_, itemIndex) => {
 });
 
 const experimentWidget = grid.set(0, 9, 5, 3, contrib.tree, {
-  label: 'experimentWidget.actions'
+  label: 'experimentWidget.actions',
+  style: {
+    selected: {
+      fg: 'white',
+      bold: true
+    }
+  }
 });
 
 const userWidget = grid.set(5, 9, 7, 3, contrib.table, {
