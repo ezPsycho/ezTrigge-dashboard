@@ -61,8 +61,19 @@ class TriggerServer extends EventEmitter {
   removeClient(id) {
     if (!Object.keys(this.clients).includes(id)) return false;
 
-    delete this.clients[id];
+    const client = this.clients[id];
 
+    if(client.props.id) {
+      delete this.clientsById[client.props.id];
+    }
+
+    if(client.props.type){
+      const typeClients = this.clientsByType[client.props.type];
+      const typeIndex = typeClients.indexOf(client);
+      typeClients.splice(typeIndex, 1);
+    }
+
+    delete this.clients[id];
     this.updateUserTable();
     return true;
   }
@@ -191,7 +202,7 @@ class TriggerServer extends EventEmitter {
 
     if (!clientIds.includes(id)) {
       client.send('REGISTERED');
-      client.setProps({ id: type });
+      client.setProps({ id: id });
 
       client.server.clientsById[id] = client;
 

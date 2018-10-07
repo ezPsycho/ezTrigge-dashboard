@@ -53,7 +53,7 @@ class Client {
 
       // prettier-ignore
       this.logger.log(w(`Connection reseted, ip: ${this.ip}, uuid: ${this.shortUuid}, you may need to check the experiment client.`));
-      this.server.removeClient(this.shortUuid);
+      this.server.removeClient(this.uuid);
     });
 
     this.socket.on('close', () => {
