@@ -17,10 +17,16 @@ import {
   serverPackagePath,
   configFile
 } from './modules/config';
-import welcomeMessage from './modules/welcome';
 import Logger from './modules/Logger';
+import hackRequire from './modules/hackRequire';
+import welcomeMessage from './modules/welcome';
 
 import TriggerServer from './modules/Server';
+
+// We hacked node's require method here, to ensure that 
+// each plugin and program can get the '@ezTrigger/server' 
+// without installing them in their own path.
+hackRequire();
 
 const DEBUG_NO_CUI = false;
 
