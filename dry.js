@@ -1,6 +1,5 @@
 import { configFile } from './modules/config';
 import TriggerServer from './modules/Server';
-import EzNirsTrigger from './modules/EzNirsTrigger';
 
 const clientTypes = {
   TRG: 'ezNirsTrigger client',
@@ -17,10 +16,6 @@ const server = new TriggerServer({
   clientTypes
 });
 
-const triggerSystem = new EzNirsTrigger(server);
-
 (async () => {
-  triggerSystem.integrate();
-
   await server.start();
 })();

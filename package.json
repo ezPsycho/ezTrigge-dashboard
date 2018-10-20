@@ -9,6 +9,7 @@
     "start": "node -r esm ./deploy/bundle.js",
     "debug": "node --inspect=9229 -r esm ./dashboard.js --debug",
     "dev:start": "node -r esm ./dashboard.js",
+    "dry": "node -r esm ./dry.js",
     "package": "webpack",
     "deploy": "webpack && pkg bundle.js --targets node10-win-x86 --output ./deploy/ezTrigger-srv"
   },
