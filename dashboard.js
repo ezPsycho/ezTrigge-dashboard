@@ -366,7 +366,7 @@ const updateCommandUI = commands => {
 const updateClientUI = clients => {
   const result = [];
 
-  Object.values(clients).forEach(client => {
+  clients.forEach((set, client) => {
     const type = client.props.type ? client.props.type : '???';
 
     const id = client.props.id

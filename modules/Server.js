@@ -6,7 +6,7 @@ import EventEmitter from 'events';
 import { isNull } from 'util';
 
 import { Commands, Records } from '@ez-trigger/core';
-import { e, w, i } from '@ez-trigger/server';
+import { e, w, i, ClientCollection } from '@ez-trigger/server';
 
 import { recordExportPath } from './config';
 import Client from './Client';
@@ -28,11 +28,14 @@ class TriggerServer extends EventEmitter {
     this.restartTimeout = false;
     this.commands = new Commands(this);
     this.records = new Records(recordExportPath);
-    this.clients = {};
+    this.clients = new ClientCollection(false);
     this.clientTypes = clientTypes;
-    this.clientsByType = {};
-    this.clientsById = {};
+    this.clientsByType = new ClientCollection(true);
+    this.clientsById = new ClientCollection(false);
     this.logger = logger;
+    this.paths = {
+      recordExport: recordExportPath
+    };
 
     this.debugCommands = ['ST', 'EN'];
 
@@ -43,7 +46,7 @@ class TriggerServer extends EventEmitter {
     this.server.on('connection', socket => {
       let newClient = new Client({ client: socket, server: this, logger });
 
-      this.clients[newClient.uuid] = newClient;
+      this.clients.registerClient(newClient, newClient.uuid);
 
       // prettier-ignore
       this.logger.log(i(`${newClient.shortUuid} connected, ip: ${socket.remoteAddress}.`));
@@ -59,21 +62,20 @@ class TriggerServer extends EventEmitter {
   }
 
   removeClient(id) {
-    if (!Object.keys(this.clients).includes(id)) return false;
+    if (!this.clients.hasSet(id)) return false;
 
-    const client = this.clients[id];
+    const client = this.clients.getSet(id);
 
-    if(client.props.id) {
-      delete this.clientsById[client.props.id];
+    if (client.props.id) {
+      this.clientsById.deregisterClient(client.props.id);
+    }
+    
+    if (client.props.type) {
+      this.clientsByType.deregisterClient(client, client.props.type);
     }
 
-    if(client.props.type){
-      const typeClients = this.clientsByType[client.props.type];
-      const typeIndex = typeClients.indexOf(client);
-      typeClients.splice(typeIndex, 1);
-    }
+    this.clients.deregisterClient(id);
 
-    delete this.clients[id];
     this.updateUserTable();
     return true;
   }
@@ -138,20 +140,15 @@ class TriggerServer extends EventEmitter {
   }
 
   async broadcast(message, type = '*') {
-    if (type !== '*') {
-      if (this.clientsByType[type]) {
-        this.clientsByType[type].map(client => client.send(message));
-      }
-    } else {
-      Object.values(this.clients).map(client => client.send(message));
-    }
+    this.clientsByType.broadcast(message, type);
   }
 
   async send(message, id) {
-    if (id && this.clientsById[id]) {
-      this.clientsById[id].send(message);
+    if (id && this.clientsById.hasSet(id)) {
+      this.clientsById.getSet(id).send(message);
     } else {
-      Object.values(this.clients)
+      this.clients
+        .getClients()
         .filter(client => client.uuid === 'id' || client.shortUuid === 'id')
         .map(client => client.send(message));
     }
@@ -174,9 +171,7 @@ class TriggerServer extends EventEmitter {
       client.send('VERIFIED');
       client.setProps({ type: type });
 
-      client.server.clientsByType[type] = Object.values(
-        client.server.clients
-      ).filter(client => client.props.type === type);
+      client.server.clientsByType.registerClient(client, type);
 
       // prettier-ignore
       client.logger.log(i(`${client.shortUuid} was verified as ${clientType[type]}, ip: ${client.ip}.`));
@@ -191,20 +186,19 @@ class TriggerServer extends EventEmitter {
 
   async handleId({ options, client }) {
     const id = options;
-    const clientIds = Object.keys(client.server.clientsById);
 
     if (client.props.id) {
-      delete client.server.clientsById[client.id];
+      delete client.server.clientsById.deregisterClient(client.props.id);
       client.logger.log(
         i(`${client.shortUuid} deregister its original id, ip: ${client.ip}.`)
       );
     }
 
-    if (!clientIds.includes(id)) {
+    if (!client.server.clientsById.hasSet(id)) {
       client.send('REGISTERED');
       client.setProps({ id: id });
 
-      client.server.clientsById[id] = client;
+      client.server.clientsById.registerClient(client, id);
 
       // prettier-ignore
       client.logger.log(i(`${client.shortUuid} registered a ID as ${id}, ip: ${client.ip}.`));
