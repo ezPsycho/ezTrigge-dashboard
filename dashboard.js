@@ -120,9 +120,12 @@ if (serverPackagePath.length) {
     const ServerPackageClass = eval('require')(
       path.join(manifest.path, manifest.main)
     ).default; //__non_webpack_require__
-    const serverPackageObject = new ServerPackageClass(server);
+    const serverPackageObject = new ServerPackageClass(server, manifest);
+    
+    if (manifest.clientTypeId && manifest.clientTypeName) {
+      clientTypes[manifest.clientTypeId] = manifest.clientTypeName;
+    }
 
-    clientTypes[manifest.clientTypeId] = manifest.clientTypeName;
     actions[manifest.functionListName] = { children: {} };
 
     serverPackageObject.fns.forEach(fnDescription => {
