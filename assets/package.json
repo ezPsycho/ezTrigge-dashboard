@@ -1,0 +1,19 @@
+{
+  "name": "@ezTrigger/dashboard/deploy",
+  "version": "0.0.1",
+  "main": "bundle.js",
+  "author": "Losses Don",
+  "license": "MIT",
+  "dependencies": {
+    "@ez-trigger/core": "https://github.com/ezPsycho/ezTrigger-core.git",
+    "@ez-trigger/server": "https://github.com/ezPsycho/ezTrigger-server.git",
+    "blessed": "^0.1.81",
+    "blessed-contrib": "^4.8.16",
+    "esm": "^3.2.25",
+    "fs-extra": "^8.1.0",
+    "fs.realpath": "^1.0.0",
+    "glob": "^7.1.4",
+    "mock-require": "^3.0.3",
+    "picture-tube": "^1.0.0"
+  }
+}

@@ -1,4 +1,6 @@
-import mock from 'mock-require';
+global.__non_webpack_require__ = require;
+
+const mock = __non_webpack_require__('mock-require');
 
 const serverModules = require('@ez-trigger/server');
 
