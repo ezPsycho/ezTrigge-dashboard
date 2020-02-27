@@ -28,7 +28,7 @@
     "@ez-trigger/core": "https://github.com/ezPsycho/ezTrigger-core.git",
     "@ez-trigger/server": "https://github.com/ezPsycho/ezTrigger-server.git",
     "blessed": "^0.1.81",
-    "blessed-contrib": "^4.8.5",
+    "blessed-contrib": "^4.8.19",
     "colors": "^1.3.1",
     "esm": "^3.1.0",
     "fs-extra": "^7.0.0",
