@@ -36,7 +36,7 @@
     "is-callable": "^1.1.4",
     "mock-require": "^3.0.3",
     "mri": "^1.1.1",
-    "uuid": "^3.3.2"
+    "uuid": "^3.4.0"
   },
   "devDependencies": {
     "node-resourcehacker": "^1.2.1",
