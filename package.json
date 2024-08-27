@@ -41,7 +41,7 @@
   "devDependencies": {
     "node-resourcehacker": "^1.2.1",
     "pkg": "^4.4.0",
-    "webpack": "^4.19.0",
+    "webpack": "^4.44.2",
     "webpack-cli": "^3.1.0",
     "webpack-node-externals": "^1.7.2"
   },
